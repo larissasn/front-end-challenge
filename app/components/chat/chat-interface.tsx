@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Card,
   CardContent,
@@ -28,7 +28,15 @@ export default function ChatInterface() {
   const [isLoading, setIsLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const { selectedFileId } = useFileContext();
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    // rola até o final sempre que messages mudar
+    container.scrollTop = container.scrollHeight;
+  }, [messages]);
   //Chamar /chat/start para gerar conversationId
   useEffect(() => {
     const startConversation = async () => {
@@ -53,19 +61,18 @@ export default function ChatInterface() {
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || isLoading) return;
 
-    // Mensagem do usuário
+    // 1️⃣ Mensagem do usuário
     const userMessage: Message = {
       id: Date.now().toString(),
       role: "user",
       content: inputMessage,
       timestamp: new Date(),
     };
-
     setMessages((prev) => [...prev, userMessage]);
     setInputMessage("");
     setIsLoading(true);
 
-    // Mensagem do bot com ID único consistente
+    // 2️⃣ Mensagem do bot inicial (vazia, para aparecer imediatamente)
     const botMessageId = (Date.now() + Math.random()).toString();
     let assistantMessage: Message = {
       id: botMessageId,
@@ -73,8 +80,8 @@ export default function ChatInterface() {
       content: "",
       timestamp: new Date(),
     };
+    setMessages((prev) => [...prev, assistantMessage]);
 
-    // 3️ Aqui vai o fetch streaming usando selectedFileId
     try {
       const response = await fetch(`/api/chat/stream/${conversationId}`, {
         method: "POST",
@@ -89,38 +96,34 @@ export default function ChatInterface() {
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
+      let doneReading = false;
 
-      let assistantMessage: Message = {
-        id: (Date.now() + Math.random()).toString(),
-        role: "assistant",
-        content: "",
-        timestamp: new Date(),
-      };
+      while (!doneReading) {
+        const { value, done } = await reader.read();
+        doneReading = done;
+        if (value) {
+          const chunk = decoder.decode(value, { stream: true });
 
-      // Adiciona imediatamente para aparecer o balão do bot
-      setMessages((prev) => [...prev, assistantMessage]);
+          // Concatena o novo conteúdo
+          assistantMessage = {
+            ...assistantMessage,
+            content: assistantMessage.content + chunk,
+          };
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        const chunk = decoder.decode(value);
-
-        // Atualiza com clone para forçar render
-        assistantMessage = {
-          ...assistantMessage,
-          content: assistantMessage.content + chunk,
-        };
-        setMessages((prev) => [
-          ...prev.filter((m) => m.id !== assistantMessage.id),
-          assistantMessage,
-        ]);
+          // Atualiza a mensagem do bot no state
+          setMessages((prev) => [
+            ...prev.filter((m) => m.id !== assistantMessage.id),
+            assistantMessage,
+          ]);
+        }
       }
     } catch (error) {
       console.error(error);
       toast({
         variant: "destructive",
         title: "Erro ao enviar mensagem",
-        description: "Não foi possível enviar a mensagem. Tente novamente.",
+        description:
+          (error as Error)?.message || "Não foi possível enviar a mensagem",
       });
     } finally {
       setIsLoading(false);
@@ -165,7 +168,10 @@ export default function ChatInterface() {
         </CardHeader>
 
         {/* Messages Area */}
-        <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
+        <CardContent
+          ref={messagesContainerRef}
+          className="flex-1 overflow-y-auto p-4 space-y-4"
+        >
           {messages.length === 0 ? (
             <div className="flex items-center justify-center h-full text-center">
               <div className="space-y-3">
