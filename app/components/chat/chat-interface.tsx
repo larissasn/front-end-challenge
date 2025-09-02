@@ -89,18 +89,27 @@ export default function ChatInterface() {
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
+
       let assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
+        id: (Date.now() + Math.random()).toString(),
         role: "assistant",
         content: "",
         timestamp: new Date(),
       };
 
+      // Adiciona imediatamente para aparecer o balão do bot
+      setMessages((prev) => [...prev, assistantMessage]);
+
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         const chunk = decoder.decode(value);
-        assistantMessage.content += chunk;
+
+        // Atualiza com clone para forçar render
+        assistantMessage = {
+          ...assistantMessage,
+          content: assistantMessage.content + chunk,
+        };
         setMessages((prev) => [
           ...prev.filter((m) => m.id !== assistantMessage.id),
           assistantMessage,
@@ -122,6 +131,15 @@ export default function ChatInterface() {
     return timestamp.toLocaleTimeString();
   };
 
+  useEffect(() => {
+    const stored = localStorage.getItem(conversationId || "");
+    if (stored) setMessages(JSON.parse(stored));
+  }, [conversationId]);
+
+  useEffect(() => {
+    if (conversationId)
+      localStorage.setItem(conversationId, JSON.stringify(messages));
+  }, [messages, conversationId]);
   return (
     <div className="space-y-6">
       {/* Implementation Notice */}
