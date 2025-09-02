@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { MessageSquare, Bot, User, Send, AlertTriangle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useFileContext } from "@/app/context/FileContext";
+import { toast } from "../ui/use-toast";
 
 interface Message {
   id: string;
@@ -25,12 +26,34 @@ export default function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const { selectedFileId } = useFileContext();
+
+  //Chamar /chat/start para gerar conversationId
+  useEffect(() => {
+    const startConversation = async () => {
+      try {
+        const response = await fetch("/api/chat/start", { method: "POST" });
+        if (!response.ok) throw new Error("Falha ao iniciar conversa");
+        const data = await response.json();
+        setConversationId(data.conversation_id);
+      } catch (error) {
+        console.error(error);
+        toast({
+          variant: "destructive",
+          title: "Erro ao iniciar conversa",
+          description: (error as Error).message || "Tente recarregar a página.",
+        });
+      }
+    };
+    startConversation();
+  }, []);
 
   // TODO: Implement actual chat functionality
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || isLoading) return;
 
+    // Mensagem do usuário
     const userMessage: Message = {
       id: Date.now().toString(),
       role: "user",
@@ -42,9 +65,16 @@ export default function ChatInterface() {
     setInputMessage("");
     setIsLoading(true);
 
-    // TODO: Replace with actual API call to streaming endpoint
-    // Example implementation needed:
+    // Mensagem do bot com ID único consistente
+    const botMessageId = (Date.now() + Math.random()).toString();
+    let assistantMessage: Message = {
+      id: botMessageId,
+      role: "assistant",
+      content: "",
+      timestamp: new Date(),
+    };
 
+    // 3️ Aqui vai o fetch streaming usando selectedFileId
     try {
       const response = await fetch(`/api/chat/stream/${conversationId}`, {
         method: "POST",
@@ -78,7 +108,11 @@ export default function ChatInterface() {
       }
     } catch (error) {
       console.error(error);
-      // Aqui você pode adicionar um toast ou alert
+      toast({
+        variant: "destructive",
+        title: "Erro ao enviar mensagem",
+        description: "Não foi possível enviar a mensagem. Tente novamente.",
+      });
     } finally {
       setIsLoading(false);
     }
