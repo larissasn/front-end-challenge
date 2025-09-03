@@ -1,4 +1,3 @@
-
 # Desafio Agent UI - Frontend
 
 ⚡ **Frontend Next.js 14 com Interface de Chat IA**
@@ -20,15 +19,76 @@ yarn build
 
 App executa em: `http://localhost:3000`
 
+Configuração do Backend
+
+# Navegar para o diretório backend
+
+cd backend
+
+# Instalar dependências Python
+
+pip install -r requirements.txt
+python -m venv venv -Esse comando cria uma pasta chamada venv no seu projeto.
+
+# venv\Scripts\activate - Esse comando pra ativa o ambiente virtual.
+
+# Configurar variáveis de ambiente
+
+cp .env.example .env
+
+# Editar .env com sua chave API OpenRouter
+
+# Iniciar o servidor FastAPI
+
+python main.py
+O backend estará disponível em http://localhost:8000
+
+Documentação da API: http://localhost:8000/docs
+Verificação de Saúde: http://localhost:8000/health 2. Configuração do Frontend
+
+# Navegar para o diretório frontend
+
+cd app
+
+# Instalar dependências Node.js
+
+yarn install
+
+# Iniciar o servidor de desenvolvimento
+
+yarn dev
+O frontend estará disponível em http://localhost:3000
+
+3. Configuração
+   Chave API OpenRouter (Necessária para recursos de IA)
+   Registre-se em OpenRouter
+   Obtenha sua chave API
+   Adicione-a ao backend/.env:
+   OPENROUTER_API_KEY=sua_chave_aqui
+   Variáveis de Ambiente
+   Backend (backend/.env):
+
+OPENROUTER_API_KEY=sua_chave_api_openrouter_aqui
+OPENROUTER_MODEL=anthropic/claude-3-haiku
+OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
+AGENT_NAME=FileProcessorAgent
+MAX_FILE_SIZE_MB=10
+CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+Frontend (app/.env):
+
+BACKEND_URL=http://localhost:8000
+
 ## 🏗️ Arquitetura
 
 ### Páginas
+
 - `/` - Homepage com visão geral dos recursos
 - `/upload` - Interface de upload de arquivos
 - `/chat` - Interface de chat IA (TODO: Implementação necessária)
 - `/download` - Processamento e download de arquivos
 
 ### Estrutura de Componentes
+
 ```
 components/
 ├── layout/          # Cabeçalho, navegação
@@ -40,29 +100,12 @@ components/
 
 ## 🎯 TODO: Tarefas de Implementação
 
-### 🔥 Tarefa Principal: Chat Streaming
-
-**Arquivo:** `components/chat/chat-interface.tsx`
-
-**Estado Atual:** Shell básico de UI com funcionalidade placeholder
-
-**O que você precisa implementar:**
+### 🔥 Tarefa Implementada: Chat Streaming
 
 1. **Manipulação de Resposta Streaming**
-   ```typescript
-   // Conectar ao endpoint streaming
-   const response = await fetch('/api/chat/stream/conversation-id', {
-     method: 'POST', 
-     headers: { 'Content-Type': 'application/json' },
-     body: JSON.stringify({ message: inputMessage, file_id: fileId })
-   })
-
-   // Manipular chunks streaming
-   const reader = response.body.getReader()
-   // Processar dados streaming...
-   ```
 
 2. **Atualizações de UI em Tempo Real**
+
    - Exibir mensagens conforme chegam via stream
    - Adicionar indicadores de digitação
    - Manipular histórico de conversas
@@ -73,50 +116,13 @@ components/
    - Exibir informações do arquivo
    - Respostas conscientes do contexto
 
-### 🎨 Melhorias de UI
-
-- Boundaries de erro em toda a aplicação
-- Skeletons de carregamento
-- Notificações toast para ações
-- Melhorias de design responsivo
-
-### 📡 Gerenciamento de Estado
-
-- Estado global para arquivos enviados
-- Persistência de conversas
-- Compartilhamento de dados entre páginas
-
-## 🛠️ Componentes Disponíveis
-
 ### Componentes UI (Shadcn)
+
 - `Button` - Vários estilos e tamanhos
 - `Card` - Contêineres de conteúdo
 - `Input` / `Textarea` - Entradas de formulário
 - `Alert` - Notificações
 - `Label` - Rótulos de formulário
-
-### Componentes Personalizados
-- `UploadInterface` - Sistema completo de upload de arquivo
-- `ChatInterface` - UI de chat (precisa implementação)
-- `DownloadInterface` - Processamento e download de arquivo
-- `Header` - Navegação com design responsivo
-
-## 📱 Recursos
-
-### ✅ Implementado
-- Upload responsivo de arquivo com drag & drop
-- UI elegante com Tailwind CSS
-- Navegação e roteamento
-- Configuração de integração de API
-- Gerenciamento de download
-- Base de tratamento de erros
-
-### 🚧 TODO (Suas Tarefas)
-- Implementação de chat streaming
-- Manipulação de mensagens em tempo real
-- Gerenciamento de estado de conversa
-- Boundaries de erro aprimorados
-- Melhorias de estado de carregamento
 
 ## 🎨 Estilização
 
@@ -124,59 +130,5 @@ components/
 - **Shadcn UI** - Componentes pré-construídos
 - **Lucide Icons** - Ícones elegantes
 - **Design Responsivo** - Abordagem mobile-first
-
-## 🔧 Dicas de Desenvolvimento
-
-### Melhores Práticas React/Next.js
-- Use Server Components por padrão
-- Adicione `'use client'` apenas quando necessário
-- Implemente boundaries de erro adequados
-- Manipule estados de carregamento graciosamente
-
-### Gerenciamento de Estado
-```typescript
-// Exemplo de estrutura de estado necessária
-interface AppState {
-  uploadedFiles: UploadedFile[]
-  conversations: Conversation[]
-  currentFileId?: string
-  isLoading: boolean
-}
-```
-
-### Integração de API
-```typescript
-// Todas as rotas da API fazem proxy para o backend
-'/api/upload' -> 'http://localhost:8000/api/upload'
-'/api/chat/*' -> 'http://localhost:8000/api/chat/*'  
-'/api/download/*' -> 'http://localhost:8000/api/download/*'
-```
-
-## 🧪 Testando Sua Implementação
-
-1. **Fluxo de Upload**
-   - Envie um arquivo .txt
-   - Anote o ID do arquivo retornado
-   - Verifique se o arquivo aparece no estado
-
-2. **Fluxo de Chat** 
-   - Inicie uma conversa
-   - Envie mensagens
-   - Verifique se o streaming funciona
-   - Teste com contexto de arquivo
-
-3. **Fluxo de Download**
-   - Processe arquivos enviados
-   - Baixe os resultados
-   - Verifique o gerenciamento de arquivos
-
-## 📋 Foco da Avaliação
-
-- **Implementação de Streaming** (40%)
-- **Gerenciamento de Estado** (25%) 
-- **Tratamento de Erros** (20%)
-- **Polimento UI/UX** (15%)
-
----
 
 Construído com Next.js 14 ⚡
