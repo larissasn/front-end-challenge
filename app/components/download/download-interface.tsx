@@ -10,57 +10,48 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Download,
-  FileText,
-  Zap,
-  AlertCircle,
-  CheckCircle,
-  Clock,
-} from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Download, Zap, CheckCircle, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useFileContext } from "@/app/context/FileContext";
+
+interface ProcessedFile {
+  file_id: string;
+  output_filename: string;
+  summary: string;
+  processed_at: string;
+}
 
 interface OutputFile {
   filename: string;
   size: number;
   created: string;
-  modified: string;
-}
-
-interface ProcessedFile {
-  file_id: string;
-  output_filename: string;
-  processing_status: string;
-  summary: string;
-  processed_at: string;
 }
 
 export default function DownloadInterface() {
   const { selectedFileId, selectedFileName } = useFileContext();
   const [fileId, setFileId] = useState(selectedFileId || "");
-  const [processingInstructions, setProcessingInstructions] = useState("");
+  const [instructions, setInstructions] = useState("");
   const [processing, setProcessing] = useState(false);
   const [processedFiles, setProcessedFiles] = useState<ProcessedFile[]>([]);
   const [availableFiles, setAvailableFiles] = useState<OutputFile[]>([]);
   const { toast } = useToast();
 
-  // Load available files on component mount
+  // Carregar arquivos disponíveis
   useEffect(() => {
     fetchAvailableFiles();
   }, []);
 
   const fetchAvailableFiles = async () => {
     try {
-      const response = await fetch("/api/download/list");
-      if (response.ok) {
-        const data = await response.json();
+      const res = await fetch("/api/download/list");
+      if (res.ok) {
+        const data = await res.json();
         setAvailableFiles(data.files || []);
       }
-    } catch (error) {
-      console.error("Failed to fetch available files:", error);
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -68,7 +59,7 @@ export default function DownloadInterface() {
     if (!fileId.trim()) {
       toast({
         title: "File ID required",
-        description: "Please enter a file ID to process",
+        description: "Enter a file ID",
         variant: "destructive",
       });
       return;
@@ -77,36 +68,29 @@ export default function DownloadInterface() {
     setProcessing(true);
 
     try {
-      const response = await fetch("/api/download/process", {
+      const res = await fetch("/api/download/process", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           file_id: fileId,
-          processing_instructions: processingInstructions || undefined,
+          processing_instructions: instructions || undefined,
         }),
       });
+      if (!res.ok) throw new Error("Processing failed");
 
-      if (!response.ok) {
-        throw new Error("Processing failed");
-      }
-
-      const result: ProcessedFile = await response.json();
+      const result: ProcessedFile = await res.json();
       setProcessedFiles((prev) => [result, ...prev]);
-
       toast({
         title: "Processing completed",
-        description: `File has been processed and is ready for download`,
+        description: "File is ready for download",
       });
 
-      // Refresh available files list
       await fetchAvailableFiles();
-    } catch (error) {
-      console.error("Processing error:", error);
+    } catch (err: any) {
+      console.error(err);
       toast({
         title: "Processing failed",
-        description: "Please check the file ID and try again",
+        description: err.message || "Try again",
         variant: "destructive",
       });
     } finally {
@@ -116,12 +100,10 @@ export default function DownloadInterface() {
 
   const downloadFile = async (filename: string) => {
     try {
-      const response = await fetch(`/api/download/file/${filename}`);
-      if (!response.ok) {
-        throw new Error("Download failed");
-      }
+      const res = await fetch(`/api/download/file/${filename}`);
+      if (!res.ok) throw new Error("Download failed");
 
-      const blob = await response.blob();
+      const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -135,26 +117,23 @@ export default function DownloadInterface() {
         title: "Download started",
         description: `${filename} is being downloaded`,
       });
-    } catch (error) {
-      console.error("Download error:", error);
+    } catch (err: any) {
+      console.error(err);
       toast({
         title: "Download failed",
-        description: "Please try again",
+        description: err.message || "Try again",
         variant: "destructive",
       });
     }
   };
 
-  const formatFileSize = (bytes: number): string => {
+  const formatDate = (d: string) => new Date(d).toLocaleString();
+  const formatFileSize = (bytes: number) => {
     if (bytes === 0) return "0 Bytes";
     const k = 1024;
     const sizes = ["Bytes", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
-  };
-
-  const formatDate = (dateString: string): string => {
-    return new Date(dateString).toLocaleString();
+    return (bytes / Math.pow(k, i)).toFixed(2) + " " + sizes[i];
   };
 
   return (
@@ -164,47 +143,35 @@ export default function DownloadInterface() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Zap className="w-5 h-5" />
-            Process File with AI
+            Process File
           </CardTitle>
           <CardDescription>
-            Enter a file ID from your uploads to process it with our AI agent
+            Enter a file ID to process it with AI
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="fileId">File ID</Label>
+            <Label>File ID</Label>
             <Input
-              id="fileId"
               value={fileId}
               onChange={(e) => setFileId(e.target.value)}
               placeholder={
                 selectedFileName
                   ? `Using: ${selectedFileName}`
-                  : "Enter the file ID"
+                  : "Enter file ID"
               }
               disabled={processing}
             />
-            {selectedFileId && (
-              <p className="text-sm text-muted-foreground">
-                Using file: <strong>{selectedFileName}</strong>
-              </p>
-            )}
           </div>
-
           <div className="space-y-2">
-            <Label htmlFor="instructions">
-              Processing Instructions (Optional)
-            </Label>
+            <Label>Instructions (Optional)</Label>
             <Textarea
-              id="instructions"
-              value={processingInstructions}
-              onChange={(e) => setProcessingInstructions(e.target.value)}
-              placeholder="Provide specific instructions for how you want the file to be analyzed..."
+              value={instructions}
+              onChange={(e) => setInstructions(e.target.value)}
               rows={3}
               disabled={processing}
             />
           </div>
-
           <Button
             onClick={processFile}
             disabled={processing || !fileId.trim()}
@@ -225,40 +192,35 @@ export default function DownloadInterface() {
         </CardContent>
       </Card>
 
-      {/* Recently Processed Files */}
+      {/* Recently Processed */}
       {processedFiles.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CheckCircle className="w-5 h-5 text-green-600" />
-              Recently Processed ({processedFiles.length})
+              Recently Processed
             </CardTitle>
-            <CardDescription>Files processed in this session</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {processedFiles.map((file, index) => (
-                <div key={index} className="border rounded-lg p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">{file.output_filename}</p>
-                      <p className="text-sm text-muted-foreground">
-                        Processed: {formatDate(file.processed_at)}
-                      </p>
-                    </div>
-                    <Button onClick={() => downloadFile(file.output_filename)}>
-                      <Download className="w-4 h-4 mr-2" />
-                      Download
-                    </Button>
+              {processedFiles.map((file, idx) => (
+                <div
+                  key={idx}
+                  className="border rounded-lg p-4 flex justify-between items-center"
+                >
+                  <div>
+                    <p className="font-medium">{file.output_filename}</p>
+                    <p className="text-sm text-muted-foreground">
+                      Processed: {formatDate(file.processed_at)}
+                    </p>
                   </div>
-                  {file.summary && (
-                    <div className="bg-muted/50 p-3 rounded-md">
-                      <p className="text-sm font-medium mb-1">Summary:</p>
-                      <p className="text-sm text-muted-foreground">
-                        {file.summary}
-                      </p>
-                    </div>
-                  )}
+                  <Button
+                    onClick={() => downloadFile(file.output_filename)}
+                    size="sm"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Download
+                  </Button>
                 </div>
               ))}
             </div>
@@ -271,28 +233,21 @@ export default function DownloadInterface() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <FileText className="w-5 h-5" />
-              Available Downloads ({availableFiles.length})
+              Available Downloads
             </CardTitle>
-            <CardDescription>
-              All processed files available for download
-            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               {availableFiles.map((file) => (
                 <div
                   key={file.filename}
-                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                  className="border rounded-lg p-3 flex justify-between items-center"
                 >
-                  <div className="flex items-center gap-3">
-                    <FileText className="w-5 h-5 text-blue-600" />
-                    <div>
-                      <p className="font-medium">{file.filename}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {formatFileSize(file.size)} • {formatDate(file.created)}
-                      </p>
-                    </div>
+                  <div>
+                    <p className="font-medium">{file.filename}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {formatFileSize(file.size)} • {formatDate(file.created)}
+                    </p>
                   </div>
                   <Button
                     variant="outline"
@@ -309,7 +264,7 @@ export default function DownloadInterface() {
         </Card>
       )}
 
-      {/* No Files Message */}
+      {/* No files fallback */}
       {availableFiles.length === 0 && processedFiles.length === 0 && (
         <Card className="text-center py-12">
           <CardContent>
@@ -320,8 +275,7 @@ export default function DownloadInterface() {
               <div>
                 <h3 className="font-medium">No processed files yet</h3>
                 <p className="text-sm text-muted-foreground">
-                  Upload a file first, then process it to see download options
-                  here
+                  Upload and process a file to see download options here
                 </p>
               </div>
             </div>
