@@ -18,7 +18,7 @@ interface UploadedFile {
   filename: string;
   size: number;
   upload_time: string;
-  status: string;
+  status: "uploading" | "success" | "error";
 }
 
 export default function UploadInterface() {
@@ -59,6 +59,16 @@ export default function UploadInterface() {
   const uploadFile = async (file: File) => {
     setUploading(true);
 
+    const tempFile: UploadedFile = {
+      file_id: Date.now().toString(),
+      filename: file.name,
+      size: file.size,
+      upload_time: new Date().toISOString(),
+      status: "uploading",
+    };
+
+    setUploadedFiles([tempFile]); // um arquivo por vez
+
     const formData = new FormData();
     formData.append("file", file);
 
@@ -67,15 +77,10 @@ export default function UploadInterface() {
         method: "POST",
         body: formData,
       });
-
-      if (!response.ok) {
-        throw new Error("Upload failed");
-      }
+      if (!response.ok) throw new Error("Upload failed");
 
       const result: UploadedFile = await response.json();
-      setUploadedFiles((prev) => [result, ...prev]);
-
-      // Atualiza no contexto para o chat conseguir usar
+      setUploadedFiles([{ ...result, status: "success" }]);
       setSelectedFileId(result.file_id);
       setSelectedFileName(result.filename);
 
@@ -84,7 +89,8 @@ export default function UploadInterface() {
         description: `${file.name} has been uploaded and is ready for processing`,
       });
     } catch (error) {
-      console.error("Upload error:", error);
+      console.error(error);
+      setUploadedFiles([{ ...tempFile, status: "error" }]);
       toast({
         title: "Upload failed",
         description: "Please try again or check your file",
@@ -92,11 +98,10 @@ export default function UploadInterface() {
       });
     } finally {
       setUploading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
+
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
@@ -214,10 +219,36 @@ export default function UploadInterface() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-md text-xs font-medium">
+                    {/* <div className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-md text-xs font-medium">
                       <CheckCircle className="w-3 h-3" />
                       Ready
+                    </div> */}
+
+                    <div
+                      className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium ${
+                        file.status === "uploading"
+                          ? "bg-blue-100 text-blue-700"
+                          : file.status === "error"
+                          ? "bg-red-100 text-red-700"
+                          : "bg-green-100 text-green-700"
+                      }`}
+                    >
+                      {file.status === "uploading" && (
+                        <Upload className="w-3 h-3 animate-spin" />
+                      )}
+                      {file.status === "error" && (
+                        <AlertCircle className="w-3 h-3" />
+                      )}
+                      {file.status === "success" && (
+                        <CheckCircle className="w-3 h-3" />
+                      )}
+                      {file.status === "uploading"
+                        ? "Uploading"
+                        : file.status === "error"
+                        ? "Error"
+                        : "Ready"}
                     </div>
+
                     <Button
                       variant="ghost"
                       size="sm"
