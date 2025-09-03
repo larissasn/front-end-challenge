@@ -61,7 +61,7 @@ export default function ChatInterface() {
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || isLoading) return;
 
-    // 1️⃣ Mensagem do usuário
+    // 1️ Mensagem do usuário
     const userMessage: Message = {
       id: Date.now().toString(),
       role: "user",
@@ -72,7 +72,7 @@ export default function ChatInterface() {
     setInputMessage("");
     setIsLoading(true);
 
-    // 2️⃣ Mensagem do bot inicial (vazia, para aparecer imediatamente)
+    // 2️ Mensagem do bot inicial (vazia, para aparecer imediatamente)
     const botMessageId = (Date.now() + Math.random()).toString();
     let assistantMessage: Message = {
       id: botMessageId,
@@ -83,6 +83,15 @@ export default function ChatInterface() {
     setMessages((prev) => [...prev, assistantMessage]);
 
     try {
+      if (!conversationId) {
+        toast({
+          variant: "destructive",
+          title: "Conversa não iniciada",
+          description: "Aguarde um instante e tente novamente.",
+        });
+        setIsLoading(false);
+        return;
+      }
       const response = await fetch(`/api/chat/stream/${conversationId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -111,10 +120,13 @@ export default function ChatInterface() {
           };
 
           // Atualiza a mensagem do bot no state
-          setMessages((prev) => [
-            ...prev.filter((m) => m.id !== assistantMessage.id),
-            assistantMessage,
-          ]);
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantMessage.id
+                ? { ...m, content: assistantMessage.content }
+                : m
+            )
+          );
         }
       }
     } catch (error) {
@@ -134,27 +146,52 @@ export default function ChatInterface() {
     return timestamp.toLocaleTimeString();
   };
 
+  // Função para carregar histórico salvo
+  const loadMessages = (id: string): Message[] => {
+    const raw = localStorage.getItem(`chat-history-${id}`);
+    if (!raw) return [];
+    try {
+      const parsed = JSON.parse(raw);
+      return parsed.map((m: any) => ({
+        ...m,
+        timestamp: new Date(m.timestamp), // reconverte string -> Date
+      }));
+    } catch {
+      return [];
+    }
+  };
+
+  // Função para salvar histórico
+  const saveMessages = (id: string, msgs: Message[]) => {
+    localStorage.setItem(`chat-history-${id}`, JSON.stringify(msgs));
+  };
+
+  // Carregar quando conversationId mudar
   useEffect(() => {
-    const stored = localStorage.getItem(conversationId || "");
-    if (stored) setMessages(JSON.parse(stored));
+    if (conversationId) {
+      const stored = loadMessages(conversationId);
+      if (stored.length > 0) {
+        setMessages(stored);
+      }
+    }
   }, [conversationId]);
 
+  // Salvar sempre que mensagens mudarem
   useEffect(() => {
-    if (conversationId)
-      localStorage.setItem(conversationId, JSON.stringify(messages));
+    if (conversationId) {
+      saveMessages(conversationId, messages);
+    }
   }, [messages, conversationId]);
+
   return (
     <div className="space-y-6">
-      {/* Implementation Notice */}
-      <Alert className="border-yellow-200 bg-yellow-50 dark:bg-yellow-950">
-        <AlertTriangle className="h-4 w-4 text-yellow-600" />
-        <AlertDescription className="text-yellow-800 dark:text-yellow-200">
-          <strong>TODO:</strong> This chat interface needs to be implemented.
-          Key features to add: streaming responses, conversation management,
-          file context integration.
+      <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950">
+        <MessageSquare className="h-4 w-4 text-blue-600" />
+        <AlertDescription className="text-blue-800 dark:text-blue-200">
+          Envie uma mensagem para começar a conversar com a IA. Se você carregou
+          um arquivo, as respostas podem usar esse contexto.
         </AlertDescription>
       </Alert>
-
       {/* Chat Container */}
       <Card className="h-[600px] flex flex-col">
         <CardHeader className="border-b">
