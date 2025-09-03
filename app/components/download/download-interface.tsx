@@ -1,149 +1,161 @@
+"use client";
 
-'use client'
-
-import React, { useState, useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Download, FileText, Zap, AlertCircle, CheckCircle, Clock } from 'lucide-react'
-import { useToast } from '@/hooks/use-toast'
+import React, { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Download,
+  FileText,
+  Zap,
+  AlertCircle,
+  CheckCircle,
+  Clock,
+} from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useFileContext } from "@/app/context/FileContext";
 
 interface OutputFile {
-  filename: string
-  size: number
-  created: string
-  modified: string
+  filename: string;
+  size: number;
+  created: string;
+  modified: string;
 }
 
 interface ProcessedFile {
-  file_id: string
-  output_filename: string
-  processing_status: string
-  summary: string
-  processed_at: string
+  file_id: string;
+  output_filename: string;
+  processing_status: string;
+  summary: string;
+  processed_at: string;
 }
 
 export default function DownloadInterface() {
-  const [fileId, setFileId] = useState('')
-  const [processingInstructions, setProcessingInstructions] = useState('')
-  const [processing, setProcessing] = useState(false)
-  const [processedFiles, setProcessedFiles] = useState<ProcessedFile[]>([])
-  const [availableFiles, setAvailableFiles] = useState<OutputFile[]>([])
-  const { toast } = useToast()
+  const { selectedFileId, selectedFileName } = useFileContext();
+  const [fileId, setFileId] = useState(selectedFileId || "");
+  const [processingInstructions, setProcessingInstructions] = useState("");
+  const [processing, setProcessing] = useState(false);
+  const [processedFiles, setProcessedFiles] = useState<ProcessedFile[]>([]);
+  const [availableFiles, setAvailableFiles] = useState<OutputFile[]>([]);
+  const { toast } = useToast();
 
   // Load available files on component mount
   useEffect(() => {
-    fetchAvailableFiles()
-  }, [])
+    fetchAvailableFiles();
+  }, []);
 
   const fetchAvailableFiles = async () => {
     try {
-      const response = await fetch('/api/download/list')
+      const response = await fetch("/api/download/list");
       if (response.ok) {
-        const data = await response.json()
-        setAvailableFiles(data.files || [])
+        const data = await response.json();
+        setAvailableFiles(data.files || []);
       }
     } catch (error) {
-      console.error('Failed to fetch available files:', error)
+      console.error("Failed to fetch available files:", error);
     }
-  }
+  };
 
   const processFile = async () => {
     if (!fileId.trim()) {
       toast({
-        title: 'File ID required',
-        description: 'Please enter a file ID to process',
-        variant: 'destructive',
-      })
-      return
+        title: "File ID required",
+        description: "Please enter a file ID to process",
+        variant: "destructive",
+      });
+      return;
     }
 
-    setProcessing(true)
+    setProcessing(true);
 
     try {
-      const response = await fetch('/api/download/process', {
-        method: 'POST',
+      const response = await fetch("/api/download/process", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           file_id: fileId,
-          processing_instructions: processingInstructions || undefined
+          processing_instructions: processingInstructions || undefined,
         }),
-      })
+      });
 
       if (!response.ok) {
-        throw new Error('Processing failed')
+        throw new Error("Processing failed");
       }
 
-      const result: ProcessedFile = await response.json()
-      setProcessedFiles(prev => [result, ...prev])
-      
+      const result: ProcessedFile = await response.json();
+      setProcessedFiles((prev) => [result, ...prev]);
+
       toast({
-        title: 'Processing completed',
+        title: "Processing completed",
         description: `File has been processed and is ready for download`,
-      })
+      });
 
       // Refresh available files list
-      await fetchAvailableFiles()
-
+      await fetchAvailableFiles();
     } catch (error) {
-      console.error('Processing error:', error)
+      console.error("Processing error:", error);
       toast({
-        title: 'Processing failed',
-        description: 'Please check the file ID and try again',
-        variant: 'destructive',
-      })
+        title: "Processing failed",
+        description: "Please check the file ID and try again",
+        variant: "destructive",
+      });
     } finally {
-      setProcessing(false)
+      setProcessing(false);
     }
-  }
+  };
 
   const downloadFile = async (filename: string) => {
     try {
-      const response = await fetch(`/api/download/file/${filename}`)
+      const response = await fetch(`/api/download/file/${filename}`);
       if (!response.ok) {
-        throw new Error('Download failed')
+        throw new Error("Download failed");
       }
 
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = filename
-      document.body.appendChild(a)
-      a.click()
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(a)
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
 
       toast({
-        title: 'Download started',
+        title: "Download started",
         description: `${filename} is being downloaded`,
-      })
-
+      });
     } catch (error) {
-      console.error('Download error:', error)
+      console.error("Download error:", error);
       toast({
-        title: 'Download failed',
-        description: 'Please try again',
-        variant: 'destructive',
-      })
+        title: "Download failed",
+        description: "Please try again",
+        variant: "destructive",
+      });
     }
-  }
+  };
 
   const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes'
-    const k = 1024
-    const sizes = ['Bytes', 'KB', 'MB', 'GB']
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-  }
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  };
 
   const formatDate = (dateString: string): string => {
-    return new Date(dateString).toLocaleString()
-  }
+    return new Date(dateString).toLocaleString();
+  };
 
   return (
     <div className="space-y-6">
@@ -165,13 +177,24 @@ export default function DownloadInterface() {
               id="fileId"
               value={fileId}
               onChange={(e) => setFileId(e.target.value)}
-              placeholder="Enter the file ID from your upload"
+              placeholder={
+                selectedFileName
+                  ? `Using: ${selectedFileName}`
+                  : "Enter the file ID"
+              }
               disabled={processing}
             />
+            {selectedFileId && (
+              <p className="text-sm text-muted-foreground">
+                Using file: <strong>{selectedFileName}</strong>
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="instructions">Processing Instructions (Optional)</Label>
+            <Label htmlFor="instructions">
+              Processing Instructions (Optional)
+            </Label>
             <Textarea
               id="instructions"
               value={processingInstructions}
@@ -182,8 +205,8 @@ export default function DownloadInterface() {
             />
           </div>
 
-          <Button 
-            onClick={processFile} 
+          <Button
+            onClick={processFile}
             disabled={processing || !fileId.trim()}
             className="w-full"
           >
@@ -210,9 +233,7 @@ export default function DownloadInterface() {
               <CheckCircle className="w-5 h-5 text-green-600" />
               Recently Processed ({processedFiles.length})
             </CardTitle>
-            <CardDescription>
-              Files processed in this session
-            </CardDescription>
+            <CardDescription>Files processed in this session</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -233,7 +254,9 @@ export default function DownloadInterface() {
                   {file.summary && (
                     <div className="bg-muted/50 p-3 rounded-md">
                       <p className="text-sm font-medium mb-1">Summary:</p>
-                      <p className="text-sm text-muted-foreground">{file.summary}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {file.summary}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -258,7 +281,10 @@ export default function DownloadInterface() {
           <CardContent>
             <div className="space-y-3">
               {availableFiles.map((file) => (
-                <div key={file.filename} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                <div
+                  key={file.filename}
+                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                >
                   <div className="flex items-center gap-3">
                     <FileText className="w-5 h-5 text-blue-600" />
                     <div>
@@ -268,8 +294,8 @@ export default function DownloadInterface() {
                       </p>
                     </div>
                   </div>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     size="sm"
                     onClick={() => downloadFile(file.filename)}
                   >
@@ -294,7 +320,8 @@ export default function DownloadInterface() {
               <div>
                 <h3 className="font-medium">No processed files yet</h3>
                 <p className="text-sm text-muted-foreground">
-                  Upload a file first, then process it to see download options here
+                  Upload a file first, then process it to see download options
+                  here
                 </p>
               </div>
             </div>
@@ -302,5 +329,5 @@ export default function DownloadInterface() {
         </Card>
       )}
     </div>
-  )
+  );
 }
