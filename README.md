@@ -1,116 +1,134 @@
+# Desafio Agent UI - Frontend
 
-# Desafio Agent UI - Backend
+⚡ **Frontend Next.js 14 com Interface de Chat IA**
 
-🔧 **Backend FastAPI para Processamento de Arquivos com Agente IA**
-
-Este backend fornece endpoints de API RESTful para upload de arquivos, processamento com IA e funcionalidade de chat streaming usando integração OpenRouter.
+Aplicação React moderna com funcionalidades de upload de arquivos, chat streaming e gerenciamento de download com componentes UI elegantes.
 
 ## 🚀 Início Rápido
 
-### Instalação
-
 ```bash
 # Instalar dependências
-pip install -r requirements.txt
+yarn install
 
-# Configurar ambiente
+# Iniciar servidor de desenvolvimento
+yarn dev
+
+# Construir para produção
+yarn build
+```
+
+App executa em: `http://localhost:3000`
+
+Configuração do Backend
+
+# Navegar para o diretório backend
+
+cd backend
+
+# Instalar dependências Python
+
+pip install -r requirements.txt
+python -m venv venv -Esse comando cria uma pasta chamada venv no seu projeto.
+
+# venv\Scripts\activate - Esse comando pra ativa o ambiente virtual.
+
+# Configurar variáveis de ambiente
+
 cp .env.example .env
+
 # Editar .env com sua chave API OpenRouter
 
-# Executar o servidor
+# Iniciar o servidor FastAPI
+
 python main.py
-```
+O backend estará disponível em http://localhost:8000
 
-Servidor executa em: `http://localhost:8000`
+Documentação da API: http://localhost:8000/docs
+Verificação de Saúde: http://localhost:8000/health 2. Configuração do Frontend
 
-## 📡 Endpoints da API
+# Navegar para o diretório frontend
 
-### Upload de Arquivo
-- `POST /api/upload/` - Enviar arquivos .txt
-- `GET /api/upload/status/{file_id}` - Verificar status do arquivo
+cd app
 
-### Chat & IA
-- `POST /api/chat/start` - Iniciar nova conversa
-- `POST /api/chat/stream/{conversation_id}` - Chat streaming
-- `GET /api/chat/status` - Status do agente
+# Instalar dependências Node.js
 
-### Processamento de Arquivo
-- `POST /api/download/process` - Processar arquivo com IA
-- `GET /api/download/file/{filename}` - Baixar arquivo processado
-- `GET /api/download/list` - Listar arquivos disponíveis
+yarn install
 
-### Sistema
-- `GET /` - Informações da API
-- `GET /health` - Verificação de saúde
-- `GET /docs` - Documentação interativa da API
+# Iniciar o servidor de desenvolvimento
 
-## 🧠 Recursos do Agente IA
+yarn dev
+O frontend estará disponível em http://localhost:3000
 
-### Processamento de Arquivo
-- Resumo de conteúdo
-- Extração de tópicos principais
-- Geração de insights
-- Instruções de processamento personalizadas
+3. Configuração
+   Chave API OpenRouter (Necessária para recursos de IA)
+   Registre-se em OpenRouter
+   Obtenha sua chave API
+   Adicione-a ao backend/.env:
+   OPENROUTER_API_KEY=sua_chave_aqui
+   Variáveis de Ambiente
+   Backend (backend/.env):
 
-### Chat Streaming
-- Respostas em tempo real
-- Integração de contexto de arquivo
-- Histórico de conversas
-- Suporte a múltiplos modelos
-
-## 📁 Estrutura de Diretórios
-
-```
-backend/
-├── app/
-│   ├── routes/          # Endpoints da API
-│   ├── services/        # Lógica de negócio
-│   ├── models.py        # Esquemas Pydantic
-│   └── config.py        # Configuração
-├── uploads/             # Armazenamento de arquivos
-├── outputs/             # Arquivos processados
-└── main.py             # Entrada da aplicação
-```
-
-## 🔧 Configuração
-
-Variáveis de ambiente em `.env`:
-
-```env
-# Configuração OpenRouter
-OPENROUTER_API_KEY=sua_chave_api_aqui
+OPENROUTER_API_KEY=sua_chave_api_openrouter_aqui
 OPENROUTER_MODEL=anthropic/claude-3-haiku
 OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
-
-# Configuração de Arquivo  
+AGENT_NAME=FileProcessorAgent
 MAX_FILE_SIZE_MB=10
-ALLOWED_FILE_EXTENSIONS=.txt
-
-# Configuração CORS
 CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+Frontend (app/.env):
+
+BACKEND_URL=http://localhost:8000
+
+## 🏗️ Arquitetura
+
+### Páginas
+
+- `/` - Homepage com visão geral dos recursos
+- `/upload` - Interface de upload de arquivos
+- `/chat` - Interface de chat IA (TODO: Implementação necessária)
+- `/download` - Processamento e download de arquivos
+
+### Estrutura de Componentes
+
+```
+components/
+├── layout/          # Cabeçalho, navegação
+├── upload/          # Componentes de upload de arquivo
+├── chat/            # Componentes de interface de chat
+├── download/        # Gerenciamento de download
+└── ui/              # Componentes UI reutilizáveis
 ```
 
-## 🧪 Testes
+## 🎯 TODO: Tarefas de Implementação
 
-```bash
-# Testar endpoint de saúde
-curl http://localhost:8000/health
+### 🔥 Tarefa Implementada: Chat Streaming
 
-# Enviar um arquivo
-curl -X POST -F "file=@test.txt" http://localhost:8000/api/upload/
+1. **Manipulação de Resposta Streaming**
 
-# Ver documentação da API
-open http://localhost:8000/docs
-```
+2. **Atualizações de UI em Tempo Real**
 
-## 🔒 Recursos de Segurança
+   - Exibir mensagens conforme chegam via stream
+   - Adicionar indicadores de digitação
+   - Manipular histórico de conversas
+   - Mostrar estados de carregamento
 
-- Validação de tipo de arquivo
-- Limites de tamanho (10MB padrão)
-- Sanitização de entrada
-- Tratamento de erros
-- Configuração CORS
+3. **Integração de Contexto de Arquivo**
+   - Referenciar arquivos enviados no chat
+   - Exibir informações do arquivo
+   - Respostas conscientes do contexto
 
----
+### Componentes UI (Shadcn)
 
-Construído com FastAPI 🚀
+- `Button` - Vários estilos e tamanhos
+- `Card` - Contêineres de conteúdo
+- `Input` / `Textarea` - Entradas de formulário
+- `Alert` - Notificações
+- `Label` - Rótulos de formulário
+
+## 🎨 Estilização
+
+- **Tailwind CSS** - Estilização utility-first
+- **Shadcn UI** - Componentes pré-construídos
+- **Lucide Icons** - Ícones elegantes
+- **Design Responsivo** - Abordagem mobile-first
+
+Construído com Next.js 14 ⚡
